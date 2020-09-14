@@ -1,0 +1,260 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Display Webcam Stream</title>
+
+</head>
+
+<body>
+    <p id="para2"> This method will detect the movement of selected color as points</p>
+    <p id="para"> detected Points </p>
+
+
+    <div id="container">
+        <video autoplay="FALSE" id="videox" width="100" height="100" controls></video>
+    </div>
+
+    <div style="position:relative;  top:2px;  ">
+        <input id="sens" type="number" value=10 onchange="setSensiv()" />
+        <input id="colFilR" type="number" value=1 onchange="setColorfilterR()" />
+        <input id="colFilG" type="number" value=254 onchange="setColorfilterG()" />
+        <input id="colFilB" type="number" value=1 onchange="setColorfilterB()" />
+        <input id="fRate" type="number" value=500 onchange="setFrameRate()" />
+        <p>Sensitivity -----   Red -----   Green-----   Blue------   frameRate </p>
+    </div>
+
+    <button onclick="captureStrt()">Capture</button>
+    <button onclick="StopFunction()">Stop</button>
+    <canvas id="canvas" style="overflow:auto"></canvas>
+
+
+
+    <canvas id="ColorCanvas" width="50" height="50" style="border:1px solid #000000;"> </canvas>
+
+    <script>
+        var myVar = 0;
+        var detectedPoints = [];
+        console.log(detectedPoints.length);
+
+        var captureItretor = 0;
+        var videoOrg = document.querySelector("#video");
+        var videox = document.getElementById('videox');
+
+        var filterObj = { r: 1, g: 254, b: 1 };//green
+        var sens = 10;
+        var frameRate = 100;
+        var video = videox;
+
+        function showColor() {
+
+            var canvas2 = document.getElementById('ColorCanvas');
+            var ctx2 = canvas2.getContext('2d');
+            imgData2 = ImgCrtF(filterObj.r, filterObj.g, filterObj.b, 50, ctx2);
+            ctx2.putImageData(imgData2, 0, 0);
+
+        }
+        showColor();
+
+
+        if (navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function (stream) {
+                    video.srcObject = stream;
+                })
+                .catch(function (err0r) {
+                    console.log("Something went wrong!");
+                });
+        }
+
+        //filter functions
+        function setSensiv() {
+
+            sens = document.getElementById("sens").value;
+            showColor();
+
+        }
+
+        function setColorfilterR() {
+            filterObj.r = document.getElementById("colFilR").value;
+            showColor();
+
+        }
+
+        function setColorfilterG() {
+            filterObj.g = document.getElementById("colFilG").value;
+            showColor();
+
+        }
+
+        function setColorfilterB() {
+            filterObj.b = document.getElementById("colFilB").value;
+            showColor();
+
+        }
+
+
+        function setFrameRate() {
+            frameRate = document.getElementById("fRate").value;
+            console.log(frameRate)
+        }
+
+
+
+
+
+        //
+        function captureStrt() {
+            myVar = window.setInterval(capture, frameRate);
+        }
+
+        function StopFunction() {
+            clearInterval(myVar);
+            detectedPoints = [];
+
+        }
+
+
+
+
+        /// capture
+        function capture() {
+            var canvas = document.getElementById('canvas');
+
+            // var img = document.createElement("img");
+            var ctx = canvas.getContext('2d');
+            var temp = 0;
+            var tempAry = [];
+            //var imModdata = imgDataC;
+            this.captureItretor = this.captureItretor + 1;
+
+            video = this.videox;
+            //console.log(video.videoWidth);
+
+
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight); // vedio from cam to canvas
+            var imgDataC = ctx.getImageData(0, 0, video.videoWidth, video.videoHeight);
+
+            //console.log(imgDataC);
+            //img.src = canvas.toDataURL();
+            //canvas.srcObject = stream.url;
+
+
+
+            // document.getElementById("para").innerHTML = condColor1[1];
+
+
+
+            //canvas.getContext('2d').putImageData(imgDataC, 0, 0);
+            // canvas.getContext('2d').putImageData(imgData, 0, 0);
+            //ctx.putImageData(imgData, 100, 100);
+
+            //imgData = ImgCrtF(0, 255, 0, 4, ctx); // this is for test
+            //ctx.putImageData(imgData, 2 * this.captureItretor, 5 * this.captureItretor); //TODO condColor1 can be used here, the location is x , y
+
+
+            //info// video.videoWidth(1340)* video.videoHeight*4 = imgData.data.length
+
+            var imgDataWithMod = ctx.getImageData(0, 0, video.videoWidth, video.videoHeight);
+            // canvas.getContext('2d').putImageData(imgDataWithMod, 0, 0);
+            tempAry = DetectObj(this.filterObj.r, this.filterObj.g, this.filterObj.b, imgDataWithMod, this.sens);
+
+
+
+            for (i = 0; i < tempAry.length; i++)// this as push makes new ary in ary
+                this.detectedPoints.push(tempAry[i]);
+
+
+            if (detectedPoints.length > 1)
+                document.getElementById("para").innerHTML = this.detectedPoints[detectedPoints.length - 1].toString(); //+ " " + (condColor[2] % video.videoWidth).toString() + " " + condColor[3].toString() + " " + video.videoWidth;
+
+            //test
+            // console.log(Lineto2Dy(detectedPoints[0], video.videoWidth, video.videoWidth));
+            //console.log(Lineto2Dx(detectedPoints[0], video.videoWidth, video.videoWidth));
+            //console.log(detectedPoints[0]);
+
+
+            console.log(this.detectedPoints.length);
+            //console.log(video.videoWidth); //1340
+            //depict the final curve at the end of each frame
+            imgData = ImgCrtF(0, 255, 0, 2, ctx); //create base element shape
+            // detectedPoints  contains all of points
+            // the image canvas  is  imgDataC
+            // the functio to depict is this ctx.putImageData(img, x=0, y =0);
+            // ctx.putImageData (x,y) x--> horiz, Lineto2Dx
+
+            ShowLine(ctx, detectedPoints, video.videoWidth, imgData);
+            if (detectedPoints.length > 85000)
+                StopFunction();
+
+
+
+        }
+
+
+
+
+        //---------------------functions
+        function ImgCrtF(r, g, b, size, ctx) {
+
+            var imgData = ctx.createImageData(size, size);
+            for (i = 0; i < imgData.data.length; i += 4) {
+                imgData.data[i + 0] = r;
+                imgData.data[i + 1] = g;
+                imgData.data[i + 2] = b;
+                imgData.data[i + 3] = 255;
+            }
+            return imgData;
+        }
+
+
+
+        function DetectObj(rm, gm, bm, imgDataC, sens) {
+            var condColor1 = [];
+            var temp = 0;
+            for (i = 0; i < imgDataC.data.length; i += 4) {
+                if ((imgDataC.data[i + 0] < rm + sens) & (imgDataC.data[i + 1] < gm + sens) & (imgDataC.data[i + 2] < bm + sens) & ((imgDataC.data[i + 0] > rm - sens) & (imgDataC.data[i + 1] > gm - sens) & (imgDataC.data[i + 2] > bm - sens))) {
+                    condColor1.push(i / 4);
+
+                    //document.getElementById("para2").innerHTML = ++temp;
+                }
+            }
+            return condColor1;
+        }
+
+
+        function Lineto2Dy(detectedPoint, width, height) {
+            var y = Math.floor(detectedPoint / width);
+            return y;
+        }
+        function Lineto2Dx(detectedPoint, width, height) {
+            var x = Math.floor(detectedPoint % width);
+            return x;
+        }
+
+        function ShowLine(ctx, detectedPoints, videoWidth, imgData) {
+            var y = Lineto2Dy(detectedPoints[0], videoWidth, 0)
+            var x = Lineto2Dx(detectedPoints[0], videoWidth, 0)
+
+            for (p = 0; p < detectedPoints.length; p++) {
+                y = Lineto2Dy(detectedPoints[p], videoWidth, 0)
+                x = Lineto2Dx(detectedPoints[p], videoWidth, 0)
+
+                ctx.putImageData(imgData, x, y);
+            }
+
+        }
+
+                                //html back up
+                                //<video id="video" src="~/vedio/x.mp4" type="video/mp4" controls></video>
+
+    </script>
+    <styl>
+
+    </styl>
+</body>
+</html>
